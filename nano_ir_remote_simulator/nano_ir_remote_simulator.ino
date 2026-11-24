@@ -155,6 +155,8 @@ static void send_status_json() {
     Serial.print(debug_enabled ? 1 : 0);
     Serial.print(F(", \"oled\": "));
     Serial.print(oled_ui.isReady() ? F("true") : F("false"));
+    Serial.print(F(", \"oled_enabled\": "));
+    Serial.print(oled_ui.isEnabled() ? F("true") : F("false"));
     print_json_tail();
 }
 
@@ -290,6 +292,18 @@ static void handle_set_debug(const char* cmd) {
         debug_enabled = (enable == 1);
         oled_ui.drawStatus(debug_enabled);
         send_return_value(1);
+    } else {
+        send_return_value(0);
+    }
+}
+
+static void handle_set_oled(const char* cmd) {
+    long enable = get_param_long(cmd, "enable", -1);
+    if (enable == 0 || enable == 1) {
+        oled_ui.setEnabled(enable == 1, device_id, debug_enabled);
+        Serial.print(F("{\"return_value\": 1, \"oled_enabled\": "));
+        Serial.print(oled_ui.isEnabled() ? F("true") : F("false"));
+        print_json_tail();
     } else {
         send_return_value(0);
     }
@@ -439,6 +453,9 @@ static void dispatch_command(char* raw_cmd) {
     } else if (strncmp(normalized, "/setdebug", 9) == 0 &&
                (normalized[9] == '\0' || normalized[9] == '?')) {
         handle_set_debug(normalized);
+    } else if (strncmp(normalized, "/setoled", 8) == 0 &&
+               (normalized[8] == '\0' || normalized[8] == '?')) {
+        handle_set_oled(normalized);
     } else if (strcmp(normalized, "/i2cscan") == 0 ||
                strncmp(normalized, "/i2cscan?", 9) == 0) {
         handle_i2c_scan();

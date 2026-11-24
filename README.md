@@ -3,7 +3,8 @@
 USB Serial infrared transceiver and live OLED status firmware for the classic **Arduino Nano (ATmega328P, 16 MHz, 2 KB SRAM / 32 KB Flash)**.
 
 Forked from `pico_ir_remote_simulator` and optimized for ATmega328P memory constraints:
-- **Zero-framebuffer OLED UI**: Uses `SSD1306Ascii` over hardware I2C (`0x3C`) instead of `Adafruit_SSD1306`, saving 1 KB of SRAM.
+- **Zero-framebuffer OLED UI (400 kHz I2C)**: Uses `SSD1306Ascii` over hardware Fast Mode I2C (`0x3C`, 400 kHz) instead of `Adafruit_SSD1306`, saving 1 KB of SRAM and minimizing redraw latency.
+- **Headless Boot Auto-Detect**: Sets `Wire.setWireTimeout(3000, true)` before probing `0x3C` so a Nano without an OLED or external I2C pull-ups boots cleanly and skips all OLED I2C traffic.
 - **No `/seq/*` macro engine**: Drops the 128-slot RAM buffer to keep static SRAM comfortably below 75% of 2048 bytes.
 - **Silent JSON by default (`debug = 0`, ADR-005)**: Emits pure JSON over USB Serial at 115200 baud with zero boot chatter.
 
@@ -71,7 +72,7 @@ arduino-cli upload -p /dev/cu.usbserial-1320 --fqbn arduino:avr:nano:cpu=atmega3
 
 | Endpoint | Description | Example Response |
 | :--- | :--- | :--- |
-| `/` or `/status` | Status, OLED state, and IR capture mailbox | `{"variables": {"rckeyprot": 0, ...}, "debug": 0, "oled": true, "id": "nano_ir01", ...}` |
+| `/` or `/status` | Status, OLED state (`oled`, `oled_enabled`), and IR capture mailbox | `{"variables": {"rckeyprot": 0, ...}, "debug": 0, "oled": true, "oled_enabled": true, "id": "nano_ir01", ...}` |
 | `/readkeydetail` | Read captured IR mailbox (alias of `/status`) | Same as `/status` |
 | `/clearkeydetail` | Clear pending IR mailbox to accept new capture | `{"return_value": 1, "id": "nano_ir01", ...}` |
 | `/sendircode?prot=<p>&addr=<a>&cmd=<c>&flags=<f>` | Transmit 38 kHz IR frame on D6 and update OLED Line 2 | `{"return_value": 1, "id": "nano_ir01", ...}` |
@@ -79,6 +80,7 @@ arduino-cli upload -p /dev/cu.usbserial-1320 --fqbn arduino:avr:nano:cpu=atmega3
 | `/id` | Get persisted device ID | `{"id": "nano_ir01", "name": "nano_ir", "hardware": "arduino", "connected": true}` |
 | `/id?devid=<id>` (or `/setupconfig?devid=<id>`) | Set and persist device ID in EEPROM (max 20 chars) | `{"return_value": 1, "id": "<id>", ...}` |
 | `/setdebug?enable=<0\|1>` | Toggle plain-text `[DEBUG]` logs (default `0`) | `{"return_value": 1, "id": "nano_ir01", ...}` |
+| `/setoled?enable=<0\|1>` | Runtime RAM-only OLED toggle (`0` blanks & skips updates; `1` redraws) | `{"return_value": 1, "oled_enabled": true, "id": "nano_ir01", ...}` |
 | `/i2cscan` | Scan I2C bus, report addresses, and redraw OLED UI | `{"found": ["0x3C"], "count": 1, "oled_detected": true, "return_value": 1, ...}` |
 | `/digital/<pin>/<0\|1>` | Set digital pin output (`0..19`) | `{"message": "Pin D13 set to 1", "id": "nano_ir01", ...}` |
 | `/digital/<pin>` | Read digital pin level (`0..19`) | `{"return_value": 0, "id": "nano_ir01", ...}` |

@@ -58,17 +58,36 @@ def run_smoke_tests(port: str, baud: int = 115200) -> None:
         # 1. Root status & /status
         root = send_cmd(ser, "/")
         assert "variables" in root and "id" in root and root.get("connected") is True, root
+        assert "oled_enabled" in root and isinstance(root["oled_enabled"], bool), root
         orig_id = root["id"]
-        print(f"[PASS] / -> id={orig_id}, oled={root.get('oled')}, debug={root.get('debug')}")
+        print(
+            f"[PASS] / -> id={orig_id}, oled={root.get('oled')}, "
+            f"oled_enabled={root.get('oled_enabled')}, debug={root.get('debug')}"
+        )
 
         status = send_cmd(ser, "/status")
         assert status["id"] == orig_id and "variables" in status, status
+        assert status.get("oled_enabled") == root.get("oled_enabled"), status
         print("[PASS] /status")
 
         # 2. /i2cscan
         scan = send_cmd(ser, "/i2cscan", timeout=3.0)
         assert scan.get("return_value") == 1 and isinstance(scan.get("found"), list), scan
         print(f"[PASS] /i2cscan -> found={scan['found']}, oled_detected={scan.get('oled_detected')}")
+
+        # 2b. /setoled toggle (RAM-only)
+        oled_off = send_cmd(ser, "/setoled?enable=0")
+        assert oled_off.get("return_value") == 1 and oled_off.get("oled_enabled") is False, oled_off
+        st_off = send_cmd(ser, "/status")
+        assert st_off.get("oled_enabled") is False, st_off
+
+        oled_on = send_cmd(ser, "/setoled?enable=1")
+        assert oled_on.get("return_value") == 1, oled_on
+        expected_enabled = bool(root.get("oled"))
+        assert oled_on.get("oled_enabled") is expected_enabled, oled_on
+        st_on = send_cmd(ser, "/status")
+        assert st_on.get("oled_enabled") is expected_enabled, st_on
+        print(f"[PASS] /setoled?enable=0 and /setoled?enable=1 (oled_enabled={expected_enabled})")
 
         # 3. /setdebug
         r = send_cmd(ser, "/setdebug?enable=1")
