@@ -1,0 +1,17 @@
+# Arduino-CLI / build artifacts
+build/
+*.bin
+*.elf
+*.hex
+*.uf2
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Editor / OS files
+.DS_Store
+*.swp
+*~
+.vscode/
